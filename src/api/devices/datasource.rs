@@ -1,4 +1,7 @@
+use std::str::FromStr;
 use std::sync::Arc;
+use mongodb::bson;
+use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use crate::api::devices::model::Device;
 
@@ -7,9 +10,9 @@ const COLL_NAME: &str = "device";
 
 pub trait DataSource {
     fn get_list(&self) -> Vec<Device>;
-    fn get_by_id(&self, id: String) -> Device;
-    fn create(&self, data: &Device) -> Result<Device, &str>;
-    fn update_by_id(&self, id: String, data: &Device) -> bool;
+    fn get_by_id(&self, id: String) -> Result<Device, String>;
+    fn create(&self, data: &Device) -> Result<Device, String>;
+    fn update_by_id(&self, data: &Device) -> Result<Device, String>;
     fn delete_by_id(&self, id: String) -> bool;
 }
 
@@ -25,34 +28,59 @@ impl DeviceDataSource {
     }
 }
 
+// Example: https://ichi.pro/th/ca-srang-seirfwexr-rest-api-dwy-rust-laea-mongodb-di-xyangri-144476358523348
 impl DataSource for DeviceDataSource {
     fn get_list(&self) -> Vec<Device> {
         todo!()
     }
 
-    fn get_by_id(&self, id: String) -> Device {
+    fn get_by_id(&self, id: String) -> Result<Device, String> {
         todo!()
     }
 
-    fn create(&self, data: &Device) -> Result<Device, &str> {
+    fn create(&self, data: &Device) -> Result<Device, String> {
         let mut device = data.clone();
         let db = self.mongodb.database(DB_NAME);
         let collection = db.collection::<Device>(COLL_NAME);
+
         let result = collection.insert_one(data.clone(), None);
         return match result {
             Ok(rs) => {
                 device.id = rs.inserted_id.as_object_id();
-                Ok(device)
+                Ok(device.clone())
             }
-            Err(_) => Err("Cannot add data")
+            Err(_) => Err("Cannot add data".to_string())
         };
     }
 
-    fn update_by_id(&self, id: String, data: &Device) -> bool {
-        todo!()
+    fn update_by_id(&self, data: &Device) -> Result<Device, String> {
+        let db = self.mongodb.database(DB_NAME);
+        let collection = db.collection::<Device>(COLL_NAME);
+
+        let device = data.clone();
+        let query = doc! {"_id": device.id.unwrap()};
+        let update = doc! {"$set": device.to_doc()};
+
+        let result = collection.update_one(query, update, None);
+        match result {
+            Ok(_) => {
+                Ok(device.clone())
+            }
+            Err(_) => Err("Cannot update data".to_string())
+        }
     }
 
     fn delete_by_id(&self, id: String) -> bool {
-        todo!()
+        let db = self.mongodb.database(DB_NAME);
+        let collection = db.collection::<Device>(COLL_NAME);
+
+        let id = ObjectId::from_str(id.as_str()).unwrap();
+        let query = doc! {"_id": id};
+
+        let result = collection.delete_one(query, None);
+        match result {
+            Ok(_) => true,
+            Err(_) => false
+        }
     }
 }

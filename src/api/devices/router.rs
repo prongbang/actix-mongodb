@@ -1,6 +1,8 @@
+use std::str::FromStr;
 use actix_web::{get, post, put, delete, web, Responder, HttpResponse};
+use mongodb::bson::oid::ObjectId;
 use serde_json::json;
-use crate::api::devices::model::Device;
+use crate::api::devices::model::{Device, Params};
 use crate::di::provider::Container;
 use crate::api;
 use crate::api::devices;
@@ -16,11 +18,10 @@ async fn get_by_id(container: web::Data<Container>) -> impl Responder {
 }
 
 #[post("/device")]
-async fn create(container: web::Data<Container>, json: web::Json<Device>) -> HttpResponse {
-    // let result = devices::create_device_usecase::execute();
-    let mut device = json.into_inner();
-    println!("form: {}", device.name);
-    let result = container.device_ds.create(&mut device);
+async fn create(json: web::Json<Device>, container: web::Data<Container>) -> HttpResponse {
+    let device = json.into_inner();
+
+    let result = devices::create_device_usecase::execute(&device, &container.device_repo);
     match result {
         Ok(d) => HttpResponse::Ok().json(d),
         Err(e) => HttpResponse::BadRequest().json(json!({"message": e}))
@@ -28,13 +29,27 @@ async fn create(container: web::Data<Container>, json: web::Json<Device>) -> Htt
 }
 
 #[put("/device/{id}")]
-async fn update_by_id(container: web::Data<Container>) -> impl Responder {
-    format!("I am {}", "mongodb")
+async fn update_by_id(path: web::Path<Params>, json: web::Json<Device>, container: web::Data<Container>) -> impl Responder {
+    let params = path.into_inner();
+    let mut device = json.into_inner();
+    device.id = Some(ObjectId::from_str(params.id.as_str()).unwrap());
+
+    let result = devices::update_by_id_usecase::execute(&device, &container.device_repo);
+    match result {
+        Ok(d) => HttpResponse::Ok().json(d),
+        Err(e) => HttpResponse::BadRequest().json(json!({"message": e}))
+    }
 }
 
 #[delete("/device/{id}")]
-async fn delete_by_id(container: web::Data<Container>) -> impl Responder {
-    format!("I am {}", "mongodb")
+async fn delete_by_id(path: web::Path<Params>, container: web::Data<Container>) -> impl Responder {
+    let params = path.into_inner();
+    let result = devices::delete_by_id_usecase::execute(params.id, &container.device_repo);
+    if result {
+        HttpResponse::Ok().json(json!({"message": "success"}))
+    } else {
+        HttpResponse::BadRequest().json(json!({"message": "cannot delete device by id"}))
+    }
 }
 
 pub fn initialize(cfg: &mut web::ServiceConfig) {
