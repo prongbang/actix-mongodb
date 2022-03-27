@@ -22,11 +22,11 @@ impl DeviceRepository {
 
 impl Repository for DeviceRepository {
     fn get_list(&self) -> Vec<Device> {
-        todo!()
+        self.datasource.get_list()
     }
 
     fn get_by_id(&self, id: String) -> Result<Device, String> {
-        todo!()
+        self.datasource.get_by_id(id)
     }
 
     fn create(&self, data: &Device) -> Result<Device, String> {

@@ -1,11 +1,8 @@
-use std::sync::Arc;
 use actix_web::{App, HttpServer, middleware};
 use actix_web::dev::Server;
-use actix_web::http::header;
 use actix_web::web::{Data, get};
 use crate::api::routers;
 use crate::di;
-use crate::di::provider::Container;
 
 pub fn create_server() -> Result<Server, std::io::Error> {
     std::env::set_var("RUST_LOG", "actix_web=info");

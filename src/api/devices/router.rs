@@ -4,17 +4,24 @@ use mongodb::bson::oid::ObjectId;
 use serde_json::json;
 use crate::api::devices::model::{Device, Params};
 use crate::di::provider::Container;
-use crate::api;
 use crate::api::devices;
 
 #[get("/device")]
 async fn get_all(container: web::Data<Container>) -> impl Responder {
-    format!("I am {}", "mongodb")
+    let result = devices::get_list_usecase::execute(&container.device_repo);
+
+    HttpResponse::Ok().json(result)
 }
 
 #[get("/device/{id}")]
-async fn get_by_id(container: web::Data<Container>) -> impl Responder {
-    format!("I am {}", "mongodb")
+async fn get_by_id(path: web::Path<Params>, container: web::Data<Container>) -> impl Responder {
+    let params = path.into_inner();
+
+    let result = devices::get_by_id_usecase::execute(params.id, &container.device_repo);
+    match result {
+        Ok(d) => HttpResponse::Ok().json(d),
+        Err(e) => HttpResponse::BadRequest().json(json!({"message": e}))
+    }
 }
 
 #[post("/device")]
@@ -44,6 +51,7 @@ async fn update_by_id(path: web::Path<Params>, json: web::Json<Device>, containe
 #[delete("/device/{id}")]
 async fn delete_by_id(path: web::Path<Params>, container: web::Data<Container>) -> impl Responder {
     let params = path.into_inner();
+
     let result = devices::delete_by_id_usecase::execute(params.id, &container.device_repo);
     if result {
         HttpResponse::Ok().json(json!({"message": "success"}))

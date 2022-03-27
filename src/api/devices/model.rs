@@ -1,4 +1,3 @@
-use mongodb::bson;
 use mongodb::bson::{doc, Document};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};

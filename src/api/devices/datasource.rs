@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use std::sync::Arc;
-use mongodb::bson;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use crate::api::devices::model::Device;
@@ -31,11 +30,38 @@ impl DeviceDataSource {
 // Example: https://ichi.pro/th/ca-srang-seirfwexr-rest-api-dwy-rust-laea-mongodb-di-xyangri-144476358523348
 impl DataSource for DeviceDataSource {
     fn get_list(&self) -> Vec<Device> {
-        todo!()
+        let db = self.mongodb.database(DB_NAME);
+        let collection = db.collection::<Device>(COLL_NAME);
+
+        let result = collection.find(None, None);
+        match result {
+            Ok(cursor) => {
+                let docs: Vec<Device> = cursor.map(|doc| doc.unwrap()).collect();
+                docs.clone()
+            }
+            Err(_) => vec![]
+        }
     }
 
     fn get_by_id(&self, id: String) -> Result<Device, String> {
-        todo!()
+        let db = self.mongodb.database(DB_NAME);
+        let collection = db.collection::<Device>(COLL_NAME);
+
+        let id = ObjectId::from_str(id.as_str()).unwrap();
+        let query = doc! { "_id": id };
+        let result = collection.find(query, None);
+        match result {
+            Ok(cursor) => {
+                let docs: Vec<Device> = cursor.map(|doc| doc.unwrap()).collect();
+                if docs.len() > 0 {
+                    let doc = docs.get(0).unwrap();
+                    Ok(doc.clone())
+                } else {
+                    Err("Device not found".to_string())
+                }
+            }
+            Err(_) => Err("Cannot get data by id".to_string())
+        }
     }
 
     fn create(&self, data: &Device) -> Result<Device, String> {
